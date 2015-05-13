@@ -89,9 +89,8 @@ module ActiveRecord
       if ActiveRecord::VERSION::STRING >= "4.2.0"
         # This stopped working in Rails 4.2.0.betaX.  This hopefully fixes it.
         def column(name, sql_type = nil, default = nil, null = true)
-          # from https://github.com/activescaffold/active_scaffold/blob/master/lib/active_scaffold/tableless.rb
-          cast_type = ActiveRecord::Base.connection.send :lookup_cast_type, sql_type
-          tableless_options[:columns] << ActiveRecord::ConnectionAdapters::Column.new(name.to_s, default, cast_type, sql_type.to_s, null)
+          type = "ActiveRecord::Type::#{sql_type.to_s.camelize}".constantize.new
+          tableless_options[:columns] << ActiveRecord::ConnectionAdapters::Column.new(name.to_s, default, type, null)
         end
       else
         def column(name, sql_type = nil, default = nil, null = true)
@@ -222,6 +221,26 @@ module ActiveRecord
             Hash.new()
           end
           schema_cache
+        end
+        # Fixes Issue #17. https://github.com/softace/activerecord-tableless/issues/17
+        # The following method is from the ActiveRecord gem: /lib/active_record/connection_adapters/abstract/database_statements.rb .
+        # Sanitizes the given LIMIT parameter in order to prevent SQL injection.
+        #
+        # The +limit+ may be anything that can evaluate to a string via #to_s. It
+        # should look like an integer, or a comma-delimited list of integers, or
+        # an Arel SQL literal.
+        #
+        # Returns Integer and Arel::Nodes::SqlLiteral limits as is.
+        # Returns the sanitized limit parameter, either as an integer, or as a
+        # string which contains a comma-delimited list of integers.
+        def conn.sanitize_limit(limit)
+          if limit.is_a?(Integer) || limit.is_a?(Arel::Nodes::SqlLiteral)
+            limit
+          elsif limit.to_s.include?(',')
+            Arel.sql limit.to_s.split(',').map{ |i| Integer(i) }.join(',')
+          else
+            Integer(limit)
+          end
         end
         conn
       end

@@ -37,7 +37,6 @@ module ActiveRecord
     end
 
     module ActsMethods #:nodoc:
-
       # A model that needs to be tableless will call this method to indicate
       # it.
       def has_no_table(options = {:database => :fail_fast})
@@ -89,6 +88,8 @@ module ActiveRecord
       if ActiveRecord::VERSION::STRING >= "4.2.0"
         # This stopped working in Rails 4.2.0.betaX.  This hopefully fixes it.
         def column(name, sql_type = nil, default = nil, null = true)
+          #binding.pry
+          #self.class.send(:attr_accessor, name)
           type = "ActiveRecord::Type::#{sql_type.to_s.camelize}".constantize.new
           tableless_options[:columns] << ActiveRecord::ConnectionAdapters::Column.new(name.to_s, default, type, null)
         end
@@ -208,9 +209,13 @@ module ActiveRecord
       end
 
       def connection
+
         conn = Object.new()
         def conn.quote_table_name(*args)
           ""
+        end
+        def conn.prepared_statements
+          nil
         end
         def conn.substitute_at(*args)
           nil
@@ -242,6 +247,7 @@ module ActiveRecord
             Integer(limit)
           end
         end
+
         conn
       end
 

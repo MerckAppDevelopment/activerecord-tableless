@@ -37,6 +37,7 @@ module ActiveRecord
     end
 
     module ActsMethods #:nodoc:
+
       # A model that needs to be tableless will call this method to indicate
       # it.
       def has_no_table(options = {:database => :fail_fast})
@@ -160,7 +161,8 @@ module ActiveRecord
           when :pretend_success
             []
           when :fail_fast
-            raise NoDatabase.new("Can't #find_by_sql on Tableless class")
+            []
+            #raise NoDatabase.new("Can't #find_by_sql on Tableless class")
           end
 
         end
@@ -219,6 +221,13 @@ module ActiveRecord
         end
         def conn.substitute_at(*args)
           nil
+        end
+        def conn.cacheable_query(*args)
+          arel = Object.new()
+          def arel.sql_for(*args)
+            ''
+          end
+          arel
         end
         def conn.schema_cache(*args)
           schema_cache = Object.new()
